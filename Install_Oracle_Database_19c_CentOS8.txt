@@ -14,7 +14,7 @@ passwd oracle
 wget https://yum.oracle.com/RPM-GPG-KEY-oracle-ol8 -O /etc/pki/rpm-gpg/RPM-GPG-KEY-oracle
 yum -y install oracle-database-preinstall-19c
 
-#Download oracle database RPM from https://www.oracle.com/database/technologies/oracle-database-software-downloads.html
+# Download oracle database RPM from https://www.oracle.com/database/technologies/oracle-database-software-downloads.html
 yum -y localinstall oracle-database-ee-19c-1.0-1.x86_64.rpm
 rm -f oracle-database-ee-19c-1.0-1.x86_64.rpm
 
@@ -26,8 +26,30 @@ ORACLE_HOME=/opt/oracle/product/19c/dbhome_1
 # Oracle Service SID
 ORACLE_SID=ORCLCDB" >> /etc/sysconfig/oracledb_ORCLCDB-19c.conf
 
-#Configure database
+# Configure database
 /etc/init.d/oracledb_ORCLCDB-19c configure
+
+# switch to oracle user
+su - oracle
+
+# Add variables to .bash_profile
+echo "PATH=\$PATH:/opt/oracle/product/19c/dbhome_1/bin
+export ORACLE_HOME=/opt/oracle/product/19c/dbhome_1
+export ORACLE_SID=ORCLCDB" >> .bash_profile
+
+# Read .bash_profile new variables without exiting current session
+source .bash_profile
+
+# Login as sysdba
+sqlplus / as sysdba
+
+# Change the default passwords
+alter user sys identified by orcl19;
+alter user system identified by orcl19;
+exit
+
+# Return back to root user
+exit
 
 # Create Systemd service for startup
 cat > /usr/lib/systemd/system/oracle.service << eof
@@ -56,18 +78,3 @@ systemctl enable --now oracle
 # Allow inpoud traffic
 firewall-cmd --zone=public --permanent --add-port 1521/tcp
 firewall-cmd --reload
-
-# switch to oracle user
-su - oracle
-
-# Add variables to .bash_profile
-echo "PATH=\$PATH:/opt/oracle/product/19c/dbhome_1/bin
-export ORACLE_HOME=/opt/oracle/product/19c/dbhome_1
-export ORACLE_SID=ORCLCDB" >> .bash_profile
-
-# Login as sysdba
-sqlplus / as sysdba
-
-# Change the default passwords
-alter user sys identified by orcl19;
-alter user system identified by orcl19;
