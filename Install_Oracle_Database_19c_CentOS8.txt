@@ -1,0 +1,76 @@
+# download rpm
+wget https://yum.oracle.com/repo/OracleLinux/OL8/baseos/latest/x86_64/getPackage/oraclelinux-release-el8-1.0-20.el8.x86_64.rpm
+yum localinstall -y oraclelinux-release-el8-1.0-20.el8.x86_64.rpm
+rm -f oraclelinux-release-el8-1.0-20.el8.x86_64.rpm
+
+# Create the required user accounts
+groupadd -g 54321 oinstall
+groupadd -g 54322 dba
+groupadd -g 54323 oper
+useradd -u 54321 -g oinstall -G dba,oper oracle
+passwd oracle
+
+# Install preinstall reqirements
+wget https://yum.oracle.com/RPM-GPG-KEY-oracle-ol8 -O /etc/pki/rpm-gpg/RPM-GPG-KEY-oracle
+yum -y install oracle-database-preinstall-19c
+
+#Download oracle database rpm from
+#http://www.oracle.com/technetwork/indexes/downloads/index.html
+yum -y localinstall oracle-database-ee-19c-1.0-1.x86_64.rpm
+rm -f oracle-database-ee-19c-1.0-1.x86_64.rpm
+
+# Create config file
+cat > /etc/sysconfig/oracledb_ORCL-19c.conf << eof
+# listening port for Listener
+LISTENER_PORT=1521
+# data location
+ORACLE_DATA_LOCATION=/opt/oracle/oradata
+# Oracle EM Express listener
+EM_EXPRESS_PORT=5500
+# Oracle Base
+ORACLE_BASE=/opt/oracle
+# Oracle HOME
+ORACLE_HOME=/opt/oracle/product/19c/dbhome_1
+# Oracle Service SID
+ORACLE_SID=orcl
+eof
+
+#Configure database
+/etc/init.d/oracledb_ORCLCDB-19c configure
+
+# switch to oracle user and add to .bash_profile
+PATH=$PATH:/opt/oracle/product/19c/dbhome_1/bin
+export ORACLE_HOME=/opt/oracle/product/19c/dbhome_1
+export ORACLE_SID=ORCL
+
+# Login as sysdba
+sqlplus / as sysdba
+
+# Change the default passwords
+alter user sys identified by orcl19 account unlock;
+alter user system identified by orcl19 account unlock;
+
+# Allow inpoud traffic
+firewall-cmd --zone=public --permanent --add-port 1521/tcp
+firewall-cmd --reload
+
+# Create Systemd service for startup
+cat > /usr/lib/systemd/system/oracle.service << eof
+[Unit]
+Description=Oracle Database service
+After=network.target
+
+[Service]
+Type=forking
+EnvironmentFile=/etc/sysconfig/oracledb_ORCL-19c.conf
+ExecStart=/opt/oracle/product/19c/dbhome_1/bin/dbstart $ORACLE_HOME
+ExecStop=/opt/oracle/product/19c/dbhome_1/bin/dbshut $ORACLE_HOME
+User=oracle
+
+[Install]
+WantedBy=multi-user.target
+eof
+
+# Enable and start service
+systemctl daemon-reload
+systemctl enable --now oracle
