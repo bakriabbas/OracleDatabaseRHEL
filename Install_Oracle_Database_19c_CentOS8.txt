@@ -1,18 +1,10 @@
 # download rpm
-wget https://yum.oracle.com/repo/OracleLinux/OL8/baseos/latest/x86_64/getPackage/oraclelinux-release-el8-1.0-20.el8.x86_64.rpm
-yum localinstall -y oraclelinux-release-el8-1.0-20.el8.x86_64.rpm
-rm -f oraclelinux-release-el8-1.0-20.el8.x86_64.rpm
+wget https://yum.oracle.com/repo/OracleLinux/OL8/appstream/x86_64/getPackage/oracle-database-preinstall-19c-1.0-2.el8.x86_64.rpm
+yum localinstall -y oracle-database-preinstall-19c-1.0-2.el8.x86_64.rpm
+rm -f oracle-database-preinstall-19c-1.0-2.el8.x86_64.rpm
 
-# Create the required user accounts
-groupadd -g 54321 oinstall
-groupadd -g 54322 dba
-groupadd -g 54323 oper
-useradd -u 54321 -g oinstall -G dba,oper oracle
+# Change password
 passwd oracle
-
-# Install preinstall reqirements
-wget https://yum.oracle.com/RPM-GPG-KEY-oracle-ol8 -O /etc/pki/rpm-gpg/RPM-GPG-KEY-oracle
-yum -y install oracle-database-preinstall-19c
 
 # Download oracle database RPM from https://www.oracle.com/database/technologies/oracle-database-software-downloads.html
 yum -y localinstall oracle-database-ee-19c-1.0-1.x86_64.rpm
@@ -24,7 +16,10 @@ echo "
 ORACLE_HOME=/opt/oracle/product/19c/dbhome_1
 
 # Oracle Service SID
-ORACLE_SID=ORCLCDB" >> /etc/sysconfig/oracledb_ORCLCDB-19c.conf
+ORACLE_SID=ORCL
+
+# Oracle PDB SID
+PDB_NAME=PDB1" >> /etc/sysconfig/oracledb_ORCLCDB-19c.conf
 
 # Configure database
 /etc/init.d/oracledb_ORCLCDB-19c configure
@@ -35,7 +30,7 @@ su - oracle
 # Add variables to .bash_profile
 echo "PATH=\$PATH:/opt/oracle/product/19c/dbhome_1/bin
 export ORACLE_HOME=/opt/oracle/product/19c/dbhome_1
-export ORACLE_SID=ORCLCDB" >> .bash_profile
+export ORACLE_SID=ORCL" >> .bash_profile
 
 # Read .bash_profile new variables without exiting current session
 source .bash_profile
